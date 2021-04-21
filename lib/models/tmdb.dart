@@ -13,18 +13,18 @@ class TMDB {
   final int numSeasons, numEpisodes, episodeRuntime;
 
   TMDB(
-      {this.overview,
-      this.backdropPath,
-      this.posterPath,
-      this.name,
-      this.genre,
-      this.rating,
-      this.episodeRuntime,
-      this.airDate,
-      this.creator,
-      this.numSeasons,
-      this.numEpisodes,
-      this.trailer,
+      {this.overview: "",
+      this.backdropPath: "",
+      this.posterPath: "",
+      this.name: "COMPLETR",
+      this.genre: "Media",
+      this.rating: "∞",
+      this.episodeRuntime: 0,
+      this.airDate: "2021-",
+      this.creator: "Potato",
+      this.numSeasons: 0,
+      this.numEpisodes: 0,
+      this.trailer: "",
       this.cast,
       this.similar});
 
@@ -35,14 +35,17 @@ class TMDB {
         posterPath: "https://image.tmdb.org/t/p/w154${json['poster_path']}",
         name: json['name'],
         overview: json['overview'],
-        genre: json['genres'][0]['name'],
+        genre: json['genres'].isEmpty ? "" : json['genres'][0]['name'],
         rating: json['vote_average'].toString(),
         episodeRuntime: json['episode_run_time'][0],
         airDate: (json['in_production'])
             ? "${json['first_air_date'].substring(0, 4)}-"
             : "${json['first_air_date'].substring(0, 4)}-${json['last_air_date'].substring(0, 4)}",
-        creator: json['created_by'][0]['name'],
-        trailer: json['videos']['results'][0]['key'],
+        creator:
+            json['created_by'].isEmpty ? "" : json['created_by'][0]['name'],
+        trailer: json['videos']['results'].isEmpty
+            ? ""
+            : json['videos']['results'][0]['key'],
         cast: json['credits']['cast'].map<Credits>((creditJson) {
           return Credits.fromJson(creditJson);
         }).toList(),
