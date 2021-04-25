@@ -258,10 +258,11 @@ Widget _detailsPage(
                     children: [
                       _subTitle(context, tmdb.airDate, accent),
                       _subTitle(context, tmdb.genre.toUpperCase(), accent),
-                      _subTitle(context, "${tmdb.numSeasons} SEASONS", accent),
-                      _subTitle(
-                          context, "${tmdb.numEpisodes} EPISODES", accent),
-                      _subTitle(context, "${tmdb.episodeRuntime}M AVG", accent)
+                      if (type == "tv")
+                        _subTitle(context, "${tmdb.numSeasons}", accent),
+                      if (type == "tv")
+                        _subTitle(context, "${tmdb.numEpisodes}", accent),
+                      _subTitle(context, "${tmdb.episodeRuntime}", accent)
                     ],
                   )),
               Padding(
@@ -477,7 +478,8 @@ Widget _detailsPage(
                                       MaterialPageRoute(
                                           builder: (context) => Details(
                                               tmdbid:
-                                                  tmdb.similar[index].tmdbid)));
+                                                  tmdb.similar[index].tmdbid,
+                                              type: type)));
                                 }));
                       })),
             ],

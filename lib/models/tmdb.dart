@@ -8,11 +8,13 @@ class TMDB {
       airDate,
       creator,
       trailer,
-      imdbid;
+      imdbid,
+      numSeasons,
+      numEpisodes,
+      episodeRuntime;
   final List<Credits> cast;
   final List<Similar> similar;
   final List<String> watchProviders;
-  final int numSeasons, numEpisodes, episodeRuntime;
 
   TMDB(
       {this.overview: "",
@@ -21,11 +23,11 @@ class TMDB {
       this.name: "COMPLETR",
       this.genre: "Media",
       this.rating: "∞",
-      this.episodeRuntime: 0,
+      this.episodeRuntime: "",
       this.airDate: "2021-",
       this.creator: "Potato",
-      this.numSeasons: 0,
-      this.numEpisodes: 0,
+      this.numSeasons: "",
+      this.numEpisodes: "",
       this.trailer: "",
       this.imdbid: "",
       this.cast,
@@ -52,8 +54,9 @@ class TMDB {
         overview: json['overview'],
         genre: json['genres'].isEmpty ? "" : json['genres'][0]['name'],
         rating: json['vote_average'].toString(),
-        episodeRuntime:
-            (type == "tv") ? json['episode_run_time'][0] : json['runtime'],
+        episodeRuntime: (type == "tv")
+            ? "${json['episode_run_time'][0]}M AVG"
+            : "RUNTIME:${json['runtime']}",
         airDate: (type == "tv")
             ? (json['in_production'])
                 ? "${json['first_air_date'].substring(0, 4)}-"
@@ -76,8 +79,10 @@ class TMDB {
           return Similar.fromJson(similarJson, type);
         }).toList(),
         imdbid: json['external_ids']['imdb_id'],
-        numSeasons: (type == "tv") ? json['number_of_seasons'] : 0,
-        numEpisodes: (type == "tv") ? json['number_of_episodes'] : 0,
+        numSeasons:
+            (type == "tv") ? "${json['number_of_seasons']} SEASONS" : "",
+        numEpisodes:
+            (type == "tv") ? "${json['number_of_episodes']} EPISODES" : "",
         watchProviders: providers.map<String>((provider) {
           return provider['provider_name'].toString();
         }).toList());
