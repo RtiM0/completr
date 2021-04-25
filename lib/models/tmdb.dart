@@ -7,9 +7,11 @@ class TMDB {
       overview,
       airDate,
       creator,
-      trailer;
+      trailer,
+      imdbid;
   final List<Credits> cast;
   final List<Similar> similar;
+  final List<String> watchProviders;
   final int numSeasons, numEpisodes, episodeRuntime;
 
   TMDB(
@@ -25,10 +27,22 @@ class TMDB {
       this.numSeasons: 0,
       this.numEpisodes: 0,
       this.trailer: "",
+      this.imdbid: "",
       this.cast,
-      this.similar});
+      this.similar,
+      this.watchProviders});
 
-  factory TMDB.fromJson(Map<String, dynamic> json) {
+  factory TMDB.fromJson(Map<String, dynamic> json, {String countryCode: "GB"}) {
+    var watchProvider = json['watch/providers']['results'];
+    var providers = [];
+    if (watchProvider[countryCode] != null) {
+      if (watchProvider[countryCode]['flatrate'] != null) {
+        providers.addAll(watchProvider[countryCode]['flatrate']);
+      }
+      if (watchProvider[countryCode]['buy'] != null) {
+        providers.addAll(watchProvider[countryCode]['buy']);
+      }
+    }
     return TMDB(
         backdropPath:
             "https://image.tmdb.org/t/p/original${json['backdrop_path']}",
@@ -49,11 +63,15 @@ class TMDB {
         cast: json['credits']['cast'].map<Credits>((creditJson) {
           return Credits.fromJson(creditJson);
         }).toList(),
-        similar: json['similar']['results'].map<Similar>((similarJson) {
+        similar: json['recommendations']['results'].map<Similar>((similarJson) {
           return Similar.fromJson(similarJson);
         }).toList(),
+        imdbid: json['external_ids']['imdb_id'],
         numSeasons: json['number_of_seasons'],
-        numEpisodes: json['number_of_episodes']);
+        numEpisodes: json['number_of_episodes'],
+        watchProviders: providers.map<String>((provider) {
+          return provider['provider_name'].toString();
+        }).toList());
   }
 }
 
@@ -72,14 +90,27 @@ class Credits {
 
 class Similar {
   final String name, overview, rating, posterPath;
+  final int tmdbid;
 
-  Similar({this.name, this.overview, this.rating, this.posterPath});
+  Similar(
+      {this.tmdbid, this.name, this.overview, this.rating, this.posterPath});
 
   factory Similar.fromJson(Map<String, dynamic> json) {
     return Similar(
+        tmdbid: json['id'],
         name: json['name'],
         overview: json['overview'],
         rating: json['vote_average'].toString(),
         posterPath: "https://image.tmdb.org/t/p/w154${json['poster_path']}");
+  }
+}
+
+class Ratings {
+  final String source, value;
+
+  Ratings({this.source, this.value});
+
+  factory Ratings.fromJson(Map<String, dynamic> json) {
+    return Ratings(source: json['Source'], value: json['Value']);
   }
 }
