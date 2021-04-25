@@ -33,6 +33,7 @@ dependencies:
   http: ^0.13.1
   tinycolor: ^1.0.3
   url_launcher: ^6.0.3
+  flutter_typeahead: ^3.1.1
 
 dev_dependencies:
   flutter_test:

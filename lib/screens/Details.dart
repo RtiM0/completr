@@ -16,7 +16,7 @@ Future<List<PaletteColor>> fetchColors(ImageProvider imageProvider) async {
   return generator.paletteColors;
 }
 
-Future<TMDB> fetchShow(int id) async {
+Future<TMDB> fetchShow(int id, String type) async {
   String countryCode;
   try {
     final ipapi = await http.get(Uri.http("ip-api.com", "/json"));
@@ -24,13 +24,15 @@ Future<TMDB> fetchShow(int id) async {
   } catch (e) {
     countryCode = "GB";
   }
-  final response = await http.get(Uri.https("api.themoviedb.org", "/3/tv/$id", {
+  final response =
+      await http.get(Uri.https("api.themoviedb.org", "/3/$type/$id", {
     "api_key": "aa83b59842709a91c2855a4dbf200f79",
     "append_to_response":
         "external_ids,credits,videos,recommendations,watch/providers"
   }));
   if (response.statusCode == 200) {
-    return TMDB.fromJson(jsonDecode(response.body), countryCode: countryCode);
+    return TMDB.fromJson(jsonDecode(response.body), type,
+        countryCode: countryCode);
   } else {
     throw Exception("Couldn't Load");
   }
@@ -66,7 +68,8 @@ Widget _detailsPage(
     TMDB tmdb,
     TabController _controller,
     int _tabIndex,
-    Future<List<Ratings>> ratings) {
+    Future<List<Ratings>> ratings,
+    String type) {
   const _kFontFam = 'Completr';
   const String _kFontPkg = null;
 
@@ -74,8 +77,8 @@ Widget _detailsPage(
       IconData(0xe800, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   const IconData add_to_watchlist =
       IconData(0xe801, fontFamily: _kFontFam, fontPackage: _kFontPkg);
-  // const IconData check =
-  //     IconData(0xe802, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  const IconData check =
+      IconData(0xe802, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   const IconData search =
       IconData(0xe804, fontFamily: _kFontFam, fontPackage: _kFontPkg);
   const IconData back =
@@ -166,18 +169,19 @@ Widget _detailsPage(
             ),
           ],
         ),
-        TabBar(
-            tabs: [
-              Tab(
-                child: Text("ABOUT"),
-              ),
-              Tab(
-                child: Text("EPISODE LIST"),
-              )
-            ],
-            indicator: UnderlineTabIndicator(
-                borderSide: BorderSide(color: accent, width: 2.0)),
-            controller: _controller),
+        if (type == "tv")
+          TabBar(
+              tabs: [
+                Tab(
+                  child: Text("ABOUT"),
+                ),
+                Tab(
+                  child: Text("EPISODE LIST"),
+                )
+              ],
+              indicator: UnderlineTabIndicator(
+                  borderSide: BorderSide(color: accent, width: 2.0)),
+              controller: _controller),
         ListView(
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
@@ -217,17 +221,21 @@ Widget _detailsPage(
                         decoration: BoxDecoration(
                             border: Border.all(
                                 color: Colors.white.withOpacity(.1))),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text("0/${tmdb.numEpisodes}\nEpisodes Watched",
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.barlowSemiCondensed(
-                                    textStyle:
-                                        Theme.of(context).textTheme.bodyText2,
-                                    color: accent)),
-                          ],
-                        ),
+                        child: (type == "tv")
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                      "0/${tmdb.numEpisodes}\nEpisodes Watched",
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.barlowSemiCondensed(
+                                          textStyle: Theme.of(context)
+                                              .textTheme
+                                              .bodyText2,
+                                          color: accent)),
+                                ],
+                              )
+                            : Icon(check, color: accent, size: 24),
                       )),
                 ],
               ),
@@ -500,8 +508,9 @@ Widget _detailsPage(
 
 class Details extends StatefulWidget {
   final int tmdbid;
+  final String type;
 
-  const Details({Key key, this.tmdbid}) : super(key: key);
+  const Details({Key key, this.tmdbid, this.type}) : super(key: key);
 
   @override
   _DetailsState createState() => _DetailsState();
@@ -528,7 +537,7 @@ class _DetailsState extends State<Details> with TickerProviderStateMixin {
       }
     });
     super.initState();
-    tmdb = fetchShow(widget.tmdbid);
+    tmdb = fetchShow(widget.tmdbid, widget.type);
   }
 
   @override
@@ -560,7 +569,7 @@ class _DetailsState extends State<Details> with TickerProviderStateMixin {
                       ? paletteColorlist.data
                       : def;
               return _detailsPage(context, size, colors, backdrop,
-                  snapshot.data, _controller, _tabIndex, ratings);
+                  snapshot.data, _controller, _tabIndex, ratings, widget.type);
             },
           );
         }
@@ -574,7 +583,8 @@ class _DetailsState extends State<Details> with TickerProviderStateMixin {
             TMDB(),
             _controller,
             _tabIndex,
-            ratings);
+            ratings,
+            widget.type);
       },
     );
   }

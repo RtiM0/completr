@@ -32,7 +32,8 @@ class TMDB {
       this.similar,
       this.watchProviders});
 
-  factory TMDB.fromJson(Map<String, dynamic> json, {String countryCode: "GB"}) {
+  factory TMDB.fromJson(Map<String, dynamic> json, String type,
+      {String countryCode: "GB"}) {
     var watchProvider = json['watch/providers']['results'];
     var providers = [];
     if (watchProvider[countryCode] != null) {
@@ -47,16 +48,24 @@ class TMDB {
         backdropPath:
             "https://image.tmdb.org/t/p/original${json['backdrop_path']}",
         posterPath: "https://image.tmdb.org/t/p/w154${json['poster_path']}",
-        name: json['name'],
+        name: (type == "tv") ? json['name'] : json['title'],
         overview: json['overview'],
         genre: json['genres'].isEmpty ? "" : json['genres'][0]['name'],
         rating: json['vote_average'].toString(),
-        episodeRuntime: json['episode_run_time'][0],
-        airDate: (json['in_production'])
-            ? "${json['first_air_date'].substring(0, 4)}-"
-            : "${json['first_air_date'].substring(0, 4)}-${json['last_air_date'].substring(0, 4)}",
-        creator:
-            json['created_by'].isEmpty ? "" : json['created_by'][0]['name'],
+        episodeRuntime:
+            (type == "tv") ? json['episode_run_time'][0] : json['runtime'],
+        airDate: (type == "tv")
+            ? (json['in_production'])
+                ? "${json['first_air_date'].substring(0, 4)}-"
+                : "${json['first_air_date'].substring(0, 4)}-${json['last_air_date'].substring(0, 4)}"
+            : json['release_date'].substring(0, 4),
+        creator: (type == "tv")
+            ? json['created_by'].isEmpty
+                ? ""
+                : json['created_by'][0]['name']
+            : json['credits']['crew'].firstWhere(
+                (crew) => crew['job'] == "Director",
+                orElse: () => {"name": ""})['name'],
         trailer: json['videos']['results'].isEmpty
             ? ""
             : json['videos']['results'][0]['key'],
@@ -64,11 +73,11 @@ class TMDB {
           return Credits.fromJson(creditJson);
         }).toList(),
         similar: json['recommendations']['results'].map<Similar>((similarJson) {
-          return Similar.fromJson(similarJson);
+          return Similar.fromJson(similarJson, type);
         }).toList(),
         imdbid: json['external_ids']['imdb_id'],
-        numSeasons: json['number_of_seasons'],
-        numEpisodes: json['number_of_episodes'],
+        numSeasons: (type == "tv") ? json['number_of_seasons'] : 0,
+        numEpisodes: (type == "tv") ? json['number_of_episodes'] : 0,
         watchProviders: providers.map<String>((provider) {
           return provider['provider_name'].toString();
         }).toList());
@@ -95,10 +104,10 @@ class Similar {
   Similar(
       {this.tmdbid, this.name, this.overview, this.rating, this.posterPath});
 
-  factory Similar.fromJson(Map<String, dynamic> json) {
+  factory Similar.fromJson(Map<String, dynamic> json, String type) {
     return Similar(
         tmdbid: json['id'],
-        name: json['name'],
+        name: (type == "tv") ? json['name'] : json['title'],
         overview: json['overview'],
         rating: json['vote_average'].toString(),
         posterPath: "https://image.tmdb.org/t/p/w154${json['poster_path']}");
@@ -112,5 +121,21 @@ class Ratings {
 
   factory Ratings.fromJson(Map<String, dynamic> json) {
     return Ratings(source: json['Source'], value: json['Value']);
+  }
+}
+
+class SearchResult {
+  final String name, type, overview;
+  final int tmdbid;
+
+  SearchResult({this.name, this.type, this.overview, this.tmdbid});
+
+  factory SearchResult.fromJson(Map<String, dynamic> json) {
+    String type = json['media_type'];
+    return SearchResult(
+        name: (type == "tv") ? json['name'] : json['title'],
+        type: type,
+        overview: json['overview'],
+        tmdbid: json['id']);
   }
 }
