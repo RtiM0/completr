@@ -1,23 +1,22 @@
-import 'package:flutter/rendering.dart';
+import 'package:completr/utils/db.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:completr/models/tmdb.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:tinycolor/tinycolor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 Future<List<PaletteColor>> fetchColors(ImageProvider imageProvider) async {
   final PaletteGenerator generator =
       await PaletteGenerator.fromImageProvider(imageProvider);
-  List<PaletteColor> paletteColors = [];
+  List<PaletteColor?> paletteColors = [];
   paletteColors.addAll([generator.darkVibrantColor, generator.darkMutedColor]);
   return generator.paletteColors;
 }
 
-Future<TMDB> fetchShow(int id, String type) async {
-  String countryCode;
+Future<TMDB> fetchShow(int? id, String? type) async {
+  String? countryCode;
   try {
     final ipapi = await http.get(Uri.http("ip-api.com", "/json"));
     countryCode = jsonDecode(ipapi.body)['countryCode'];
@@ -38,7 +37,7 @@ Future<TMDB> fetchShow(int id, String type) async {
   }
 }
 
-Future<List<Ratings>> fetchRatings(String imdbid) async {
+Future<List<Ratings>?> fetchRatings(String? imdbid) async {
   final response = await http
       .get(Uri.http("omdbapi.com", "/", {"i": imdbid, "apikey": "5928a79e"}));
   if (response.statusCode == 200) {
@@ -61,17 +60,19 @@ Widget _subTitle(BuildContext context, String text, Color color) {
 }
 
 Widget _detailsPage(
-    BuildContext context,
-    Size size,
-    List<PaletteColor> colors,
-    Widget backdrop,
-    TMDB tmdb,
-    TabController _controller,
-    int _tabIndex,
-    Future<List<Ratings>> ratings,
-    String type) {
+  BuildContext context,
+  Size size,
+  List<PaletteColor> colors,
+  Widget backdrop,
+  TMDB tmdb,
+  TabController? _controller,
+  int _tabIndex,
+  Future<List<Ratings>?>? ratings,
+  String? type,
+  int tmdbid,
+) {
   const _kFontFam = 'Completr';
-  const String _kFontPkg = null;
+  const String? _kFontPkg = null;
 
   const IconData favourite =
       IconData(0xe800, fontFamily: _kFontFam, fontPackage: _kFontPkg);
@@ -86,8 +87,8 @@ Widget _detailsPage(
   const IconData menu =
       IconData(0xe806, fontFamily: _kFontFam, fontPackage: _kFontPkg);
 
-  Color primary = colors.first.color.darken(10);
-  Color accent = colors.last.color.lighten(10);
+  Color primary = colors.first.color;
+  Color accent = colors.last.color;
   return Scaffold(
     appBar: AppBar(
       leading: IconButton(
@@ -96,7 +97,7 @@ Widget _detailsPage(
       ),
       centerTitle: true,
       title: Text(
-        tmdb.name.toUpperCase(),
+        tmdb.name!.toUpperCase(),
         style: TextStyle(
             fontWeight: FontWeight.w900,
             color: Colors.white,
@@ -159,7 +160,7 @@ Widget _detailsPage(
                         color: accent,
                       ),
                       Text(
-                        tmdb.rating + "/10",
+                        tmdb.rating! + "/10",
                         style: TextStyle(color: Colors.white, letterSpacing: 1),
                       )
                     ],
@@ -192,50 +193,75 @@ Widget _detailsPage(
                 children: [
                   Expanded(
                       flex: 1,
-                      child: Container(
-                        height: 75,
-                        width: size.width * 0.3,
-                        decoration: BoxDecoration(
-                            border: Border.all(
-                                color: Colors.white.withOpacity(.1))),
-                        child: Icon(favourite, color: accent, size: 24),
+                      child: InkWell(
+                        onTap: () {
+                          DatabaseHelper.toggle_favourites(
+                            context,
+                            "${type}_$tmdbid",
+                          );
+                        },
+                        child: Container(
+                          height: 75,
+                          width: size.width * 0.3,
+                          decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: Colors.white.withOpacity(.1))),
+                          child: Icon(favourite, color: accent, size: 24),
+                        ),
                       )),
                   Expanded(
                       flex: 1,
-                      child: Container(
-                        height: 75,
-                        width: size.width * 0.3,
-                        decoration: BoxDecoration(
-                            border: Border(
-                                top: BorderSide(
-                                    color: Colors.white.withOpacity(.1)),
-                                bottom: BorderSide(
-                                    color: Colors.white.withOpacity(.1)))),
-                        child: Icon(add_to_watchlist, color: accent, size: 24),
+                      child: InkWell(
+                        onTap: () {
+                          DatabaseHelper.toggle_watchList(
+                            context,
+                            "${type}_$tmdbid",
+                          );
+                        },
+                        child: Container(
+                          height: 75,
+                          width: size.width * 0.3,
+                          decoration: BoxDecoration(
+                              border: Border(
+                                  top: BorderSide(
+                                      color: Colors.white.withOpacity(.1)),
+                                  bottom: BorderSide(
+                                      color: Colors.white.withOpacity(.1)))),
+                          child:
+                              Icon(add_to_watchlist, color: accent, size: 24),
+                        ),
                       )),
                   Expanded(
                       flex: 1,
-                      child: Container(
-                        height: 75,
-                        width: size.width * 0.3,
-                        decoration: BoxDecoration(
-                            border: Border.all(
-                                color: Colors.white.withOpacity(.1))),
-                        child: (type == "tv")
-                            ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                      "0/${tmdb.numEpisodes}\nEpisodes Watched",
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.barlowSemiCondensed(
-                                          textStyle: Theme.of(context)
-                                              .textTheme
-                                              .bodyText2,
-                                          color: accent)),
-                                ],
-                              )
-                            : Icon(check, color: accent, size: 24),
+                      child: InkWell(
+                        onTap: () {
+                          DatabaseHelper.toggle_completed(
+                            context,
+                            "${type}_$tmdbid",
+                          );
+                        },
+                        child: Container(
+                          height: 75,
+                          width: size.width * 0.3,
+                          decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: Colors.white.withOpacity(.1))),
+                          child: (type == "tv")
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                        "0/${tmdb.numEpisodes}\nEpisodes Watched",
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.barlowSemiCondensed(
+                                            textStyle: Theme.of(context)
+                                                .textTheme
+                                                .bodyText2,
+                                            color: accent)),
+                                  ],
+                                )
+                              : Icon(check, color: accent, size: 24),
+                        ),
                       )),
                 ],
               ),
@@ -244,7 +270,7 @@ Widget _detailsPage(
                 child: Padding(
                     padding: EdgeInsets.fromLTRB(24, 24, 0, 0),
                     child: Text(
-                      tmdb.name.toUpperCase(),
+                      tmdb.name!.toUpperCase(),
                       textAlign: TextAlign.left,
                       style: GoogleFonts.barlowSemiCondensed(
                           textStyle: Theme.of(context).textTheme.headline4,
@@ -256,8 +282,8 @@ Widget _detailsPage(
                   padding: EdgeInsets.only(left: 24),
                   child: Row(
                     children: [
-                      _subTitle(context, tmdb.airDate, accent),
-                      _subTitle(context, tmdb.genre.toUpperCase(), accent),
+                      _subTitle(context, tmdb.airDate!, accent),
+                      _subTitle(context, tmdb.genre!.toUpperCase(), accent),
                       if (type == "tv")
                         _subTitle(context, "${tmdb.numSeasons}", accent),
                       if (type == "tv")
@@ -267,7 +293,7 @@ Widget _detailsPage(
                   )),
               Padding(
                 padding: EdgeInsets.only(left: 24, right: 24, top: 16),
-                child: Text(tmdb.overview,
+                child: Text(tmdb.overview!,
                     style: GoogleFonts.barlowSemiCondensed(
                         textStyle: Theme.of(context).textTheme.bodyText2,
                         color: Colors.white)),
@@ -290,7 +316,7 @@ Widget _detailsPage(
                   child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       physics: BouncingScrollPhysics(),
-                      itemCount: (tmdb.cast != null) ? tmdb.cast.length : 0,
+                      itemCount: (tmdb.cast != null) ? tmdb.cast!.length : 0,
                       itemBuilder: (context, index) {
                         return Padding(
                             padding: EdgeInsets.all(8),
@@ -303,19 +329,19 @@ Widget _detailsPage(
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(8.0),
                                       child: FadeInImage.assetNetwork(
-                                        image: tmdb.cast[index].profilePath,
+                                        image: tmdb.cast![index].profilePath!,
                                         placeholder:
                                             'assets/profile_placeholder.jpg',
                                         fit: BoxFit.fitHeight,
                                         height: 150,
                                       ),
                                     ),
-                                    Text(tmdb.cast[index].name,
+                                    Text(tmdb.cast![index].name!,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.barlowSemiCondensed(
                                             color: Colors.white)),
-                                    Text(tmdb.cast[index].character,
+                                    Text(tmdb.cast![index].character!,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.barlowSemiCondensed(
@@ -333,25 +359,25 @@ Widget _detailsPage(
               Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
                 Expanded(
                   flex: 1,
-                  child: FutureBuilder<List<Ratings>>(
+                  child: FutureBuilder<List<Ratings>?>(
                     future: ratings,
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
                         return ListView.builder(
                           shrinkWrap: true,
-                          itemCount: snapshot.data.length,
+                          itemCount: snapshot.data!.length,
                           itemBuilder: (context, index) {
                             return Padding(
                                 padding: EdgeInsets.only(left: 24),
                                 child: RichText(
                                     text: TextSpan(
                                         text:
-                                            '${snapshot.data[index].source}: ',
+                                            '${snapshot.data![index].source}: ',
                                         style: GoogleFonts.barlowSemiCondensed(
                                             color: accent),
                                         children: <TextSpan>[
                                       TextSpan(
-                                          text: snapshot.data[index].value,
+                                          text: snapshot.data![index].value,
                                           style:
                                               GoogleFonts.barlowSemiCondensed(
                                                   color: Colors.white))
@@ -403,7 +429,7 @@ Widget _detailsPage(
                     scrollDirection: Axis.horizontal,
                     physics: BouncingScrollPhysics(),
                     itemCount: tmdb.watchProviders != null
-                        ? tmdb.watchProviders.length
+                        ? tmdb.watchProviders!.length
                         : 0,
                     itemBuilder: (context, index) {
                       return Padding(
@@ -417,7 +443,7 @@ Widget _detailsPage(
                                 alignment: Alignment.center,
                                 child: Padding(
                                     padding: EdgeInsets.only(left: 4, right: 4),
-                                    child: Text(tmdb.watchProviders[index],
+                                    child: Text(tmdb.watchProviders![index],
                                         style: GoogleFonts.barlowSemiCondensed(
                                             color: Colors.white)))),
                           ));
@@ -435,7 +461,7 @@ Widget _detailsPage(
                       scrollDirection: Axis.horizontal,
                       physics: BouncingScrollPhysics(),
                       itemCount:
-                          (tmdb.similar != null) ? tmdb.similar.length : 0,
+                          (tmdb.similar != null) ? tmdb.similar!.length : 0,
                       itemBuilder: (context, index) {
                         return Padding(
                             padding: EdgeInsets.all(8),
@@ -446,7 +472,7 @@ Widget _detailsPage(
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(8.0),
                                       child: FadeInImage.assetNetwork(
-                                        image: tmdb.similar[index].posterPath,
+                                        image: tmdb.similar![index].posterPath!,
                                         placeholder:
                                             'assets/profile_placeholder.jpg',
                                         fit: BoxFit.fitHeight,
@@ -455,7 +481,7 @@ Widget _detailsPage(
                                     ),
                                     FittedBox(
                                       fit: BoxFit.fitWidth,
-                                      child: Text(tmdb.similar[index].name,
+                                      child: Text(tmdb.similar![index].name!,
                                           style:
                                               GoogleFonts.barlowSemiCondensed(
                                                   color: Colors.white)),
@@ -463,7 +489,7 @@ Widget _detailsPage(
                                     SizedBox(
                                         width: 154,
                                         child: Text(
-                                            tmdb.similar[index].overview,
+                                            tmdb.similar![index].overview!,
                                             overflow: TextOverflow.ellipsis,
                                             maxLines: 5,
                                             style:
@@ -478,8 +504,8 @@ Widget _detailsPage(
                                       MaterialPageRoute(
                                           builder: (context) => Details(
                                               tmdbid:
-                                                  tmdb.similar[index].tmdbid,
-                                              type: type)));
+                                                  tmdb.similar![index].tmdbid!,
+                                              type: type!)));
                                 }));
                       })),
             ],
@@ -512,17 +538,18 @@ class Details extends StatefulWidget {
   final int tmdbid;
   final String type;
 
-  const Details({Key key, this.tmdbid, this.type}) : super(key: key);
+  const Details({Key? key, required this.tmdbid, required this.type})
+      : super(key: key);
 
   @override
   _DetailsState createState() => _DetailsState();
 }
 
 class _DetailsState extends State<Details> with TickerProviderStateMixin {
-  Future<TMDB> tmdb;
-  Future<List<PaletteColor>> paletteColors;
-  Future<List<Ratings>> ratings;
-  TabController _controller;
+  Future<TMDB>? tmdb;
+  Future<List<PaletteColor>>? paletteColors;
+  Future<List<Ratings>?>? ratings;
+  TabController? _controller;
   int _tabIndex = 0;
 
   @override
@@ -531,10 +558,10 @@ class _DetailsState extends State<Details> with TickerProviderStateMixin {
       length: 2,
       vsync: this,
     );
-    _controller.addListener(() {
-      if (_controller.indexIsChanging) {
+    _controller!.addListener(() {
+      if (_controller!.indexIsChanging) {
         setState(() {
-          _tabIndex = _controller.index;
+          _tabIndex = _controller!.index;
         });
       }
     });
@@ -554,7 +581,7 @@ class _DetailsState extends State<Details> with TickerProviderStateMixin {
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           FadeInImage backdrop = FadeInImage.assetNetwork(
-              image: snapshot.data.backdropPath,
+              image: snapshot.data!.backdropPath!,
               placeholder: 'assets/profile_placeholder.jpg',
               fit: BoxFit.cover,
               height: size.height * 0.6,
@@ -562,31 +589,42 @@ class _DetailsState extends State<Details> with TickerProviderStateMixin {
           if (paletteColors == null && backdrop.image != null) {
             paletteColors = fetchColors(backdrop.image);
           }
-          ratings = fetchRatings(snapshot.data.imdbid);
+          ratings = fetchRatings(snapshot.data!.imdbid);
           return FutureBuilder<List<PaletteColor>>(
             future: paletteColors,
             builder: (context, paletteColorlist) {
               List<PaletteColor> colors =
-                  paletteColorlist.hasData && paletteColorlist.data[0] != null
-                      ? paletteColorlist.data
+                  paletteColorlist.hasData && paletteColorlist.data![0] != null
+                      ? paletteColorlist.data!
                       : def;
-              return _detailsPage(context, size, colors, backdrop,
-                  snapshot.data, _controller, _tabIndex, ratings, widget.type);
+              return _detailsPage(
+                  context,
+                  size,
+                  colors,
+                  backdrop,
+                  snapshot.data!,
+                  _controller,
+                  _tabIndex,
+                  ratings,
+                  widget.type,
+                  widget.tmdbid);
             },
           );
         }
         return _detailsPage(
-            context,
-            size,
-            def,
-            SizedBox(
-              height: size.height * 0.6,
-            ),
-            TMDB(),
-            _controller,
-            _tabIndex,
-            ratings,
-            widget.type);
+          context,
+          size,
+          def,
+          SizedBox(
+            height: size.height * 0.6,
+          ),
+          TMDB(),
+          _controller,
+          _tabIndex,
+          ratings,
+          widget.type,
+          widget.tmdbid,
+        );
       },
     );
   }
